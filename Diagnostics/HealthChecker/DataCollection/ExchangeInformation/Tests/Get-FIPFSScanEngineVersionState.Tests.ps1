@@ -19,7 +19,7 @@ Describe "Testing Get-FIPFSScanEngineVersionState.ps1" {
 
     Context "Invalid Pattern Detected" {
         BeforeAll {
-            Mock Invoke-ScriptBlockHandler -MockWith { return Import-Clixml $Script:parentPath\Tests\GetChildItemInvalidPattern.xml }
+            Mock Invoke-ScriptBlockHandler -MockWith { return Import-Clixml $Script:parentPath\Tests\DataCollection\GetChildItemInvalidPattern.xml }
             $Script:results = Get-FIPFSScanEngineVersionState -ComputerName $Script:Server
         }
 
@@ -30,7 +30,7 @@ Describe "Testing Get-FIPFSScanEngineVersionState.ps1" {
 
     Context "Valid Pattern Detected" {
         BeforeAll {
-            Mock Invoke-ScriptBlockHandler -MockWith { return Import-Clixml $Script:parentPath\Tests\GetChildItemValidPattern.xml }
+            Mock Invoke-ScriptBlockHandler -MockWith { return Import-Clixml $Script:parentPath\Tests\DataCollection\GetChildItemValidPattern.xml }
             $Script:results = Get-FIPFSScanEngineVersionState -ComputerName $Script:Server
         }
 
@@ -54,7 +54,7 @@ Describe "Testing Get-FIPFSScanEngineVersionState.ps1" {
 
     Context "No FIP-FS scan engine directory - return failed object from GetFolderFromExchangeInstallPath" {
         BeforeAll {
-            Mock Invoke-ScriptBlockHandler -MockWith { return Import-Clixml $Script:parentPath\Tests\GetChildItemFailed.xml }
+            Mock Invoke-ScriptBlockHandler -MockWith { return Import-Clixml $Script:parentPath\Tests\DataCollection\GetChildItemFailed.xml }
             Mock Write-Verbose {}
         }
 
