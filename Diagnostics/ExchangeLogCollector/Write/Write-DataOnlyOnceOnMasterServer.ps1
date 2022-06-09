@@ -3,7 +3,7 @@
 
 . $PSScriptRoot\..\ExchangeServerInfo\Get-VirtualDirectoriesLdap.ps1
 . $PSScriptRoot\..\RemoteScriptBlock\IO\Save-DataInfoToFile.ps1
-Function Write-DataOnlyOnceOnMasterServer {
+function Write-DataOnlyOnceOnMasterServer {
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseUsingScopeModifierInNewRunspaces', '', Justification = 'Can not use using for an env variable')]
     param()
     Write-Verbose("Enter Function: Write-DataOnlyOnceOnMasterServer")
@@ -43,7 +43,8 @@ Function Write-DataOnlyOnceOnMasterServer {
 
     if ($Error.Count -ne 0) {
         Save-DataInfoToFile -DataIn $Error -SaveToLocation ("$RootCopyToDirectory\AllErrors")
-        Save-DataInfoToFile -DataIn $Script:ErrorsHandled -SaveToLocation ("$RootCopyToDirectory\HandledErrors")
+        Save-DataInfoToFile -DataIn (Get-UnhandledErrors) -SaveToLocation ("$RootCopyToDirectory\UnhandledErrors")
+        Save-DataInfoToFile -DataIn (Get-HandledErrors) -SaveToLocation ("$RootCopyToDirectory\HandledErrors")
     } else {
         Write-Verbose ("No errors occurred within the script")
     }

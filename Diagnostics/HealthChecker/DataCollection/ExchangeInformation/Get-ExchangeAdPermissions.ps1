@@ -2,16 +2,24 @@
 # Licensed under the MIT License.
 
 . $PSScriptRoot\Get-ExchangeDomainConfigVersion.ps1
-. $PSScriptRoot\..\..\Helpers\Invoke-CatchActions.ps1
+. $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
 . $PSScriptRoot\..\..\..\..\Shared\ActiveDirectoryFunctions\Get-ActiveDirectoryAcl.ps1
+. $PSScriptRoot\..\..\..\..\Shared\ActiveDirectoryFunctions\Get-ExchangeOtherWellKnownObjects.ps1
 
-Function Get-ExchangeAdPermissions {
+function Get-ExchangeAdPermissions {
     [CmdletBinding()]
-    param ()
+    param (
+        [Parameter(Mandatory = $true)]
+        [HealthChecker.ExchangeMajorVersion]
+        $ExchangeVersion,
+        [Parameter(Mandatory = $true)]
+        [HealthChecker.OSServerVersion]
+        $OSVersion
+    )
 
     Write-Verbose "Calling: $($MyInvocation.MyCommand)"
 
-    Function NewMatchingEntry {
+    function NewMatchingEntry {
         param(
             [ValidateSet("Domain", "AdminSDHolder")]
             [string]$TargetObject,
@@ -26,7 +34,7 @@ Function Get-ExchangeAdPermissions {
         }
     }
 
-    Function NewGroupEntry {
+    function NewGroupEntry {
         param(
             [string]$Name,
             [object[]]$MatchingEntries
@@ -67,16 +75,15 @@ Function Get-ExchangeAdPermissions {
         Write-Verbose "Getting the domain information"
         $forest = [System.DirectoryServices.ActiveDirectory.Forest]::GetCurrentForest()
         Write-Verbose ("Detected: $($forest.Domains.Count) domain(s)")
-        $rootDomain = $forest.RootDomain.GetDirectoryEntry()
+        $otherWellKnownObjects = Get-ExchangeOtherWellKnownObjects
 
         foreach ($group in $groupLists) {
             Write-Verbose "Trying to find: $($group.Name)"
-            $searcher = New-Object System.DirectoryServices.DirectorySearcher($rootDomain, "(samAccountName=$($group.Name))")
-            $results = $searcher.FindOne()
-
-            if ($null -ne $results) {
-                $results = $results.GetDirectoryEntry()
-                $group.Sid = (New-Object System.Security.Principal.SecurityIdentifier($results.objectSid.Value, 0)).Value
+            $wkObject = $otherWellKnownObjects | Where-Object { $_.WellKnownName -eq $group.Name }
+            if ($null -ne $wkObject) {
+                Write-Verbose "Found DN in otherWellKnownObjects: $($wkObject.DistinguishedName)"
+                $entry = [ADSI]("LDAP://$($wkObject.DistinguishedName)")
+                $group.Sid = (New-Object System.Security.Principal.SecurityIdentifier($entry.objectSid.Value, 0)).Value
                 Write-Verbose "Found Results Set Sid: $($group.Sid)"
             }
         }
@@ -104,8 +111,29 @@ Function Get-ExchangeAdPermissions {
             Write-Verbose "DomainDN: $domainDN"
 
             try {
-                $domainAcl = Get-ActiveDirectoryAcl $domainDN.ToString()
-                $adminSdHolderAcl = Get-ActiveDirectoryAcl $adminSdHolderDN
+                try {
+                    # Where() method became available with PowerShell 4.0 (default PS on Server 2012 R2),
+                    # throw to initiate objectVersion (Default) testing, as we can't use Where() to check ACE below
+                    if ($OSVersion -le [HealthChecker.OSServerVersion]::Windows2012) {
+                        throw "Legacy server OS detected, fallback to 'objectVersion (Default)' validation initiated"
+                    }
+                    $domainAcl = Get-ActiveDirectoryAcl $domainDN.ToString()
+                    $adminSdHolderAcl = Get-ActiveDirectoryAcl $adminSdHolderDN
+                } catch {
+                    Invoke-CatchActions
+                    $objectVersionTestingValue = 13243
+                    if ($ExchangeVersion -eq [HealthChecker.ExchangeMajorVersion]::Exchange2013) {
+                        $objectVersionTestingValue = 13238
+                    }
+
+                    $returnedResults.Add([PSCustomObject]@{
+                            DomainName = $domainName
+                            ObjectDN   = $null
+                            ObjectAcl  = $null
+                            CheckPass  = ($prepareDomainInfo.ObjectVersion -ge $objectVersionTestingValue)
+                        })
+                    continue
+                }
 
                 foreach ($group in $groupLists) {
                     Write-Verbose "Looking Ace Entries for the group: $($group.Name)"

@@ -4,7 +4,8 @@
 . $PSScriptRoot\Copy-BulkItems.ps1
 . $PSScriptRoot\Save-DataInfoToFile.ps1
 . $PSScriptRoot\..\..\..\..\Shared\Get-RemoteRegistryValue.ps1
-Function Save-WindowsEventLogs {
+. $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
+function Save-WindowsEventLogs {
 
     Write-Verbose("Function Enter: Save-WindowsEventLogs")
     $baseSaveLocation = $Script:RootCopyToDirectory + "\Windows_Event_Logs"
@@ -88,7 +89,7 @@ Function Save-WindowsEventLogs {
                 Write-Verbose("end of collecting event logs and saving out to xml files.")
             } catch {
                 Write-Verbose("Error occurred while trying to export out the Application and System logs to xml")
-                Invoke-CatchBlockActions
+                Invoke-CatchActions
             }
         }
 

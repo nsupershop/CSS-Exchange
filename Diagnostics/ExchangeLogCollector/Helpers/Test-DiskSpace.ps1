@@ -6,8 +6,8 @@
 . $PSScriptRoot\PipelineFunctions.ps1
 . $PSScriptRoot\Start-JobManager.ps1
 . $PSScriptRoot\..\RemoteScriptBlock\Get-FreeSpace.ps1
-. $PSScriptRoot\..\RemoteScriptBlock\IO\Invoke-CatchBlockActions.ps1
-Function Test-DiskSpace {
+. $PSScriptRoot\..\..\..\Shared\ErrorMonitorFunctions.ps1
+function Test-DiskSpace {
     param(
         [Parameter(Mandatory = $true)][array]$Servers,
         [Parameter(Mandatory = $true)][string]$Path,
@@ -20,7 +20,7 @@ Function Test-DiskSpace {
         $Path = "{0}\" -f $Path
     }
 
-    Function Test-ServerDiskSpace {
+    function Test-ServerDiskSpace {
         param(
             [Parameter(Mandatory = $true)][string]$Server,
             [Parameter(Mandatory = $true)][int]$FreeSpace,
@@ -61,7 +61,7 @@ Function Test-DiskSpace {
     $getFreeSpaceString = Add-ScriptBlockInjection -PrimaryScriptBlock ${Function:Get-FreeSpace} `
         -IncludeScriptBlock @(${Function:Write-Verbose}, ${Function:New-PipelineObject}, ${Function:New-VerbosePipelineObject}) `
         -IncludeUsingParameter "WriteRemoteVerboseDebugAction" `
-        -CatchActionFunction ${Function:Invoke-CatchBlockActions}
+        -CatchActionFunction ${Function:Invoke-CatchActions}
     Write-Verbose("Creating Script Block")
     $getFreeSpaceScriptBlock = [scriptblock]::Create($getFreeSpaceString)
     $serversData = Start-JobManager -ServersWithArguments $serverArgs -ScriptBlock $getFreeSpaceScriptBlock `

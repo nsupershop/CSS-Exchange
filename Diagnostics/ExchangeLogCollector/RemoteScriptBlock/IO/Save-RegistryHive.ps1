@@ -1,9 +1,9 @@
 ﻿# Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-. $PSScriptRoot\Invoke-CatchBlockActions.ps1
 . $PSScriptRoot\Save-DataInfoToFile.ps1
-Function Save-RegistryHive {
+. $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
+function Save-RegistryHive {
     [CmdletBinding()]
     param(
         [string]$RegistryPath,
@@ -23,7 +23,7 @@ Function Save-RegistryHive {
         Save-DataInfoToFile -DataIn $results -SaveToLocation "$SaveToPath\$SaveName" -FormatList $false
     } catch {
         Write-Verbose "Failed to get registry hive for: $RegistryPath"
-        Invoke-CatchBlockActions
+        Invoke-CatchActions
     }
 
     $updatedRegistryPath = $RegistryPath.Replace("HKLM:", "HKEY_LOCAL_MACHINE\")
@@ -43,6 +43,6 @@ Function Save-RegistryHive {
             Out-File -FilePath "$baseSaveName`_HowToRead.txt"
     } catch {
         Write-Verbose "failed to export/save the registry hive for: $updatedRegistryPath"
-        Invoke-CatchBlockActions
+        Invoke-CatchActions
     }
 }

@@ -1,10 +1,10 @@
 ﻿# Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+. $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
 . $PSScriptRoot\..\..\..\..\Shared\Invoke-ScriptBlockHandler.ps1
-. $PSScriptRoot\..\..\Helpers\Invoke-CatchActions.ps1
 
-Function Get-FIPFSScanEngineVersionState {
+function Get-FIPFSScanEngineVersionState {
     [CmdletBinding()]
     [OutputType("System.Object")]
     param (

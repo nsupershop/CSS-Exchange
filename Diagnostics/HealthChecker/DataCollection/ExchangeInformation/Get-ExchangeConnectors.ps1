@@ -1,8 +1,8 @@
 ﻿# Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-. $PSScriptRoot\..\..\Helpers\Invoke-CatchActions.ps1
-Function Get-ExchangeConnectors {
+. $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
+function Get-ExchangeConnectors {
     [CmdletBinding()]
     [OutputType("System.Object[]")]
     param(

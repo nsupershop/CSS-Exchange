@@ -8,16 +8,17 @@
 . $PSScriptRoot\IO\Copy-BulkItems.ps1
 . $PSScriptRoot\IO\Copy-FullLogFullPathRecurse.ps1
 . $PSScriptRoot\IO\Copy-LogsBasedOnTime.ps1
+. $PSScriptRoot\IO\LogmanFunctions.ps1
 . $PSScriptRoot\IO\Save-DataInfoToFile.ps1
 . $PSScriptRoot\IO\Save-FailoverClusterInformation.ps1
-. $PSScriptRoot\IO\Save-LogmanExmonData.ps1
-. $PSScriptRoot\IO\Save-LogmanExperfwizData.ps1
 . $PSScriptRoot\IO\Save-ServerInfoData.ps1
 . $PSScriptRoot\IO\Save-WindowsEventLogs.ps1
-Function Invoke-RemoteMain {
+. $PSScriptRoot\..\..\..\Shared\ErrorMonitorFunctions.ps1
+function Invoke-RemoteMain {
     [CmdletBinding()]
     param()
     Write-Verbose("Function Enter: Remote-Main")
+    Invoke-ErrorMonitoring
 
     $Script:localServerObject = $PassedInfo.ServerObjects |
         Where-Object { $_.ServerName -eq $env:COMPUTERNAME }
@@ -153,7 +154,7 @@ Function Invoke-RemoteMain {
                 }
             } catch {
                 Write-Verbose "Couldn't get logman info to verify Daily Performance Logs location"
-                Invoke-CatchBlockActions
+                Invoke-CatchActions
             }
             Add-LogCopyBasedOffTimeTaskAction $copyFrom "Daily_Performance_Logs"
         }
@@ -180,6 +181,15 @@ Function Invoke-RemoteMain {
 
         if ($PassedInfo.MitigationService) {
             Add-DefaultLogCopyTaskAction "$Script:localExinstall`Logging\MitigationService" "Mitigation_Service_Logs"
+        }
+
+        if ($PassedInfo.MailboxAssistantsLogs) {
+            Add-DefaultLogCopyTaskAction "$Script:localExinstall`Logging\MailboxAssistantsLog" "Mailbox_Assistants_Logs"
+            Add-DefaultLogCopyTaskAction "$Script:localExinstall`Logging\MailboxAssistantsSlaReportLog" "Mailbox_Assistants_Sla_Report_Logs"
+
+            if ($Script:localServerObject.Version -eq 15) {
+                Add-DefaultLogCopyTaskAction "$Script:localExinstall`Logging\MailboxAssistantsDatabaseSlaLog" "Mailbox_Assistants_Database_Sla_Logs"
+            }
         }
     }
 
@@ -253,6 +263,41 @@ Function Invoke-RemoteMain {
 
             # TODO: Make into a task vs in the main loop
             Copy-BulkItems -CopyToLocation ($Script:RootCopyToDirectory + "\Transport_Configuration") -ItemsToCopyLocation $items
+        }
+
+        if ($PassedInfo.TransportAgentLogs) {
+
+            if ($Script:localServerObject.CAS) {
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.FELoggingInfo.AgentLogPath "FE_Transport_Agent_Logs"
+            }
+
+            if ($Script:localServerObject.Hub -or
+                $Script:localServerObject.Edge) {
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.HubLoggingInfo.AgentLogPath "Hub_Transport_Agent_Logs"
+            }
+
+            if ($Script:localServerObject.Mailbox) {
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.MBXLoggingInfo.MailboxSubmissionAgentLogPath "Mbx_Submission_Transport_Agent_Logs"
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.MBXLoggingInfo.MailboxDeliveryAgentLogPath "Mbx_Delivery_Transport_Agent_Logs"
+            }
+        }
+
+        if ($PassedInfo.TransportRoutingTableLogs) {
+
+            if ($Script:localServerObject.Version -ne 15 -and
+                (-not ($Script:localServerObject.Edge))) {
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.FELoggingInfo.RoutingTableLogPath "FE_Transport_Routing_Table_Logs"
+            }
+
+            if ($Script:localServerObject.Hub -or
+                $Script:localServerObject.Edge) {
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.HubLoggingInfo.RoutingTableLogPath "Hub_Transport_Routing_Table_Logs"
+            }
+
+            if ($Script:localServerObject.Version -ne 15 -and
+                (-not ($Script:localServerObject.Edge))) {
+                Add-LogCopyBasedOffTimeTaskAction $Script:localServerObject.TransportInfo.MBXLoggingInfo.RoutingTableLogPath "Mbx_Transport_Routing_Table_Logs"
+            }
         }
 
         #Exchange 2013+ only
@@ -347,13 +392,14 @@ Function Invoke-RemoteMain {
             }
         } catch {
             Write-Verbose("Failed to finish running command: $(GetTaskActionToString $taskAction)")
-            Invoke-CatchBlockActions
+            Invoke-CatchActions
         }
     }
 
     if ($Error.Count -ne 0) {
         Save-DataInfoToFile -DataIn $Error -SaveToLocation ("$Script:RootCopyToDirectory\AllErrors")
-        Save-DataInfoToFile -DataIn $Script:ErrorsHandled -SaveToLocation ("$Script:RootCopyToDirectory\HandledErrors")
+        Save-DataInfoToFile -DataIn (Get-UnhandledErrors) -SaveToLocation ("$RootCopyToDirectory\UnhandledErrors")
+        Save-DataInfoToFile -DataIn (Get-HandledErrors) -SaveToLocation ("$RootCopyToDirectory\HandledErrors")
     } else {
         Write-Verbose ("No errors occurred within the script")
     }

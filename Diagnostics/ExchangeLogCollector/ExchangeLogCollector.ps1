@@ -3,7 +3,7 @@
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '', Justification = 'Value is used')]
 [CmdletBinding(DefaultParameterSetName = "LogAge")]
-Param (
+param (
     [string]$FilePath = "C:\MS_Logs_Collection",
     [array]$Servers = @($env:COMPUTERNAME),
     [switch]$ADDriverLogs,
@@ -29,6 +29,7 @@ Param (
     [switch]$HubProtocolLogs,
     [switch]$IISLogs,
     [switch]$ImapLogs,
+    [switch]$MailboxAssistantsLogs,
     [switch]$MailboxConnectivityLogs,
     [switch]$MailboxDeliveryThrottlingLogs,
     [switch]$MailboxProtocolLogs,
@@ -49,7 +50,9 @@ Param (
     [switch]$SendConnectors,
     [Alias("ServerInfo")]
     [switch]$ServerInformation,
+    [switch]$TransportAgentLogs,
     [switch]$TransportConfig,
+    [switch]$TransportRoutingTableLogs,
     [switch]$WindowsSecurityLogs,
     [switch]$AcceptEULA,
     [switch]$AllPossibleLogs,
@@ -80,16 +83,16 @@ if ($PSBoundParameters["Verbose"]) { $Script:ScriptDebug = $true }
 
 if ($PSCmdlet.ParameterSetName -eq "Worth") { $Script:LogAge = New-TimeSpan -Days $DaysWorth -Hours $HoursWorth }
 
-Function Invoke-RemoteFunctions {
+function Invoke-RemoteFunctions {
     param(
         [Parameter(Mandatory = $true)][object]$PassedInfo
     )
 
     . $PSScriptRoot\..\..\Shared\LoggerFunctions.ps1
     . $PSScriptRoot\..\..\Shared\Write-Host.ps1
+    . $PSScriptRoot\..\..\Shared\ErrorMonitorFunctions.ps1
     . $PSScriptRoot\RemoteScriptBlock\Get-ExchangeInstallDirectory.ps1
     . $PSScriptRoot\RemoteScriptBlock\Invoke-ZipFolder.ps1
-    . $PSScriptRoot\RemoteScriptBlock\IO\Invoke-CatchBlockActions.ps1
     . $PSScriptRoot\RemoteScriptBlock\IO\Write-Verbose.ps1
     . $PSScriptRoot\RemoteScriptBlock\IO\WriteFunctions.ps1
     . $PSScriptRoot\RemoteScriptBlock\Invoke-RemoteMain.ps1
@@ -115,7 +118,7 @@ Function Invoke-RemoteFunctions {
         }
     } catch {
         Write-Host "An error occurred in Invoke-RemoteFunctions" -ForegroundColor "Red"
-        Invoke-CatchBlockActions
+        Invoke-CatchActions
         #This is a bad place to catch the error that just occurred
         #Being that there is a try catch block around each command that we run now, we should never hit an issue here unless it is is prior to that.
         Write-Verbose "Critical Failure occurred."
@@ -143,7 +146,7 @@ Function Invoke-RemoteFunctions {
 . $PSScriptRoot\Helpers\Test-PossibleCommonScenarios.ps1
 . $PSScriptRoot\Helpers\Test-RemoteExecutionOfServers.ps1
 
-Function Main {
+function Main {
 
     Start-Sleep 1
     Test-PossibleCommonScenarios
@@ -220,7 +223,7 @@ Function Main {
             Invoke-Command -ComputerName $Script:ValidServers -ScriptBlock ${Function:Invoke-RemoteFunctions} -ArgumentList $argumentList -ErrorAction Stop
         } catch {
             Write-Error "An error has occurred attempting to call Invoke-Command to do a remote collect all at once. Please notify ExToolsFeedback@microsoft.com of this issue. Stopping the script."
-            Invoke-CatchBlockActions
+            Invoke-CatchActions
             exit
         }
 
@@ -253,7 +256,6 @@ Function Main {
 $configPath = "{0}\{1}.json" -f (Split-Path -Parent $MyInvocation.MyCommand.Path), (Split-Path -Leaf $MyInvocation.MyCommand.Path)
 
 try {
-    $Error.Clear()
     <#
     Added the ability to call functions from within a bundled function so i don't have to duplicate work.
     Loading the functions into memory by using the '.' allows me to do this,
@@ -263,13 +265,15 @@ try {
             ByPass = $true
         })
 
+    Invoke-ErrorMonitoring
+
     if ((Test-Path $configPath) -and
         !$DisableConfigImport) {
         try {
             Import-ScriptConfigFile -ScriptConfigFileLocation $configPath
         } catch {
             Write-Host "Failed to load the config file at $configPath. `r`nPlease update the config file to be able to run 'ConvertFrom-Json' against it" -ForegroundColor "Red"
-            Invoke-CatchBlockActions
+            Invoke-CatchActions
             Enter-YesNoLoopAction -Question "Do you wish to continue?" -YesAction {} -NoAction { exit }
         }
     }

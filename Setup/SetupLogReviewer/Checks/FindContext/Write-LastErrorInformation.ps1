@@ -4,7 +4,7 @@
 . $PSScriptRoot\..\New-ErrorContext.ps1
 . $PSScriptRoot\..\New-WriteObject.ps1
 . $PSScriptRoot\..\Test-SetupAssist.ps1
-Function Write-LastErrorInformation {
+function Write-LastErrorInformation {
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipeline = $true)]
@@ -15,7 +15,7 @@ Function Write-LastErrorInformation {
         $lastErrorInfo = $SetupLogReviewer | GetFirstErrorWithContextToLine -1 30 200
 
         if ($null -ne $lastErrorInfo) {
-            New-WriteObject "Failed to determine known cause, but here is your error context that we are seeing" -WriteType "Error"
+            New-WriteObject "Failed to determine known cause, but here is your error context that we are seeing" -WriteType "Warning"
             $lastErrorInfo |
                 Where-Object { -not [string]::IsNullOrEmpty($_) } |
                 New-ErrorContext

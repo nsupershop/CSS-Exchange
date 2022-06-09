@@ -1,13 +1,13 @@
 ﻿# Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-. $PSScriptRoot\..\..\Helpers\Invoke-CatchActions.ps1
-Function Get-ExchangeAMSIConfigurationState {
+. $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
+function Get-ExchangeAMSIConfigurationState {
     [CmdletBinding()]
     param ()
 
     begin {
-        Function Get-AMSIStatusFlag {
+        function Get-AMSIStatusFlag {
             [CmdletBinding()]
             [OutputType([bool])]
             param (
@@ -17,10 +17,10 @@ Function Get-ExchangeAMSIConfigurationState {
 
             Write-Verbose "Calling: $($MyInvocation.MyCommand)"
             try {
-                Switch ($AMSIParameters.Split("=")[1]) {
+                switch ($AMSIParameters.Split("=")[1]) {
                     ("False") { return $false }
                     ("True") { return $true }
-                    Default { return $null }
+                    default { return $null }
                 }
             } catch {
                 Write-Verbose "Ran into an issue when calling Split method. Parameters passed: $AMSIParameters"

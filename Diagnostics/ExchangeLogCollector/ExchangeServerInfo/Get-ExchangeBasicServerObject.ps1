@@ -4,7 +4,7 @@
 . $PSScriptRoot\..\..\..\Shared\Get-ExchangeBuildVersionInformation.ps1
 #TODO: Create Pester Testing on this
 # Used to get the Exchange Version information and what roles are set on the server.
-Function Get-ExchangeBasicServerObject {
+function Get-ExchangeBasicServerObject {
     param(
         [Parameter(Mandatory = $true)][string]$ServerName,
         [Parameter(Mandatory = $false)][bool]$AddGetServerProperty = $false
@@ -15,7 +15,7 @@ Function Get-ExchangeBasicServerObject {
         $getExchangeServer = Get-ExchangeServer $ServerName -Status -ErrorAction Stop
     } catch {
         Write-Host "Failed to detect server $ServerName as an Exchange Server" -ForegroundColor "Red"
-        Invoke-CatchBlockActions
+        Invoke-CatchActions
         return $null
     }
 
@@ -55,7 +55,7 @@ Function Get-ExchangeBasicServerObject {
         Mailbox        = $mailbox
         MailboxOnly    = $exchServerRole -eq "Mailbox"
         Hub            = $exchVersion -ge 15 -and (-not ($exchServerRole -eq "ClientAccess"))
-        CAS            = $exchServerRole -like "*ClientAccess*"
+        CAS            = $exchVersion -ge 16 -or $exchServerRole -like "*ClientAccess*"
         CASOnly        = $exchServerRole -eq "ClientAccess"
         Edge           = $exchServerRole -eq "Edge"
         Version        = $exchVersion

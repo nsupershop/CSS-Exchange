@@ -9,14 +9,14 @@
     If there is a directory that doesn't contain logs within the TimeSpan,
     Collect the latest log or provide there is no logs in the directory
 #>
-Function Copy-LogsBasedOnTime {
+function Copy-LogsBasedOnTime {
     param(
         [Parameter(Mandatory = $true)][string]$LogPath,
         [Parameter(Mandatory = $true)][string]$CopyToThisLocation,
         [Parameter(Mandatory = $true)][bool]$IncludeSubDirectory
     )
     begin {
-        Function NoFilesInLocation {
+        function NoFilesInLocation {
             param(
                 [string]$Value = "No data in the location"
             )
@@ -36,7 +36,7 @@ Function Copy-LogsBasedOnTime {
             New-Item @params | Out-Null
         }
 
-        Function CopyItemsFromDirectory {
+        function CopyItemsFromDirectory {
             param(
                 [object]$AllItems,
                 [string]$CopyToLocation
@@ -63,18 +63,19 @@ Function Copy-LogsBasedOnTime {
 
         Write-Verbose "Function Enter: $($MyInvocation.MyCommand)"
         Write-Verbose "LogPath: '$LogPath' | CopyToThisLocation: '$CopyToThisLocation'"
+        New-Item -ItemType Directory -Path $CopyToThisLocation -Force | Out-Null
         $copyFromDate = [DateTime]::Now - $PassedInfo.TimeSpan
+        Write-Verbose "Copy From Date: $copyFromDate"
+    }
+    process {
 
+        # need to have the return in process
         if (-not (Test-Path $LogPath)) {
             # If the directory isn't there, provide that
             Write-Verbose "$LogPath doesn't exist"
             NoFilesInLocation "Path doesn't exist"
             return
         }
-    }
-    process {
-        New-Item -ItemType Directory -Path $CopyToThisLocation -Force | Out-Null
-        Write-Verbose "Copy From Date: $copyFromDate"
 
         if ($IncludeSubDirectory) {
             $getChildItem = Get-ChildItem -Path $LogPath -Recurse

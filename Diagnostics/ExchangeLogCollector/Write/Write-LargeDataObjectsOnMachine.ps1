@@ -8,12 +8,12 @@
 . $PSScriptRoot\..\Helpers\Start-JobManager.ps1
 . $PSScriptRoot\..\RemoteScriptBlock\Get-ExchangeInstallDirectory.ps1
 . $PSScriptRoot\..\RemoteScriptBlock\IO\Compress-Folder.ps1
-. $PSScriptRoot\..\RemoteScriptBlock\IO\Invoke-CatchBlockActions.ps1
 . $PSScriptRoot\..\RemoteScriptBlock\IO\Save-DataToFile.ps1
+. $PSScriptRoot\..\..\..\Shared\ErrorMonitorFunctions.ps1
 #This function job is to write out the Data that is too large to pass into the main script block
 #This is for mostly Exchange Related objects.
 #To handle this, we export the data locally and copy the data over the correct server.
-Function Write-LargeDataObjectsOnMachine {
+function Write-LargeDataObjectsOnMachine {
 
     Write-Verbose("Function Enter Write-LargeDataObjectsOnMachine")
 
@@ -23,7 +23,7 @@ Function Write-LargeDataObjectsOnMachine {
         }
 
     #Collect the Exchange Data that resides on their own machine.
-    Function Invoke-ExchangeResideDataCollectionWrite {
+    function Invoke-ExchangeResideDataCollectionWrite {
         param(
             [Parameter(Mandatory = $true, Position = 1)]
             [string]$SaveToLocation,
@@ -145,7 +145,7 @@ Function Write-LargeDataObjectsOnMachine {
     #Exchange objects can be rather large preventing them to be passed within an Invoke-Command -ArgumentList
     #In order to get around this and to avoid going through a loop of doing an Invoke-Command per server per object,
     #Write the data out locally, copy that directory over to the remote location.
-    Function Write-ExchangeObjectDataLocal {
+    function Write-ExchangeObjectDataLocal {
         param(
             [object]$ServerData,
             [string]$Location
@@ -174,7 +174,7 @@ Function Write-LargeDataObjectsOnMachine {
         }
     }
 
-    Function Write-DatabaseAvailabilityGroupDataLocal {
+    function Write-DatabaseAvailabilityGroupDataLocal {
         param(
             [object]$DAGWriteInfo
         )
@@ -245,7 +245,7 @@ Function Write-LargeDataObjectsOnMachine {
                     Copy-Item $zipCopyLocation $remoteLocation
                 } catch {
                     Write-Verbose("Failed to copy data to $remoteLocation. This is likely due to file sharing permissions.")
-                    Invoke-CatchBlockActions
+                    Invoke-CatchActions
                 }
             }
         #Remove the temp data location
@@ -276,7 +276,7 @@ Function Write-LargeDataObjectsOnMachine {
                         -ReportPath $reportPath
                 } catch {
                     Write-Verbose("Failed to collect failover metrics")
-                    Invoke-CatchBlockActions
+                    Invoke-CatchActions
                     $failed = $true
                 }
 
@@ -293,7 +293,7 @@ Function Write-LargeDataObjectsOnMachine {
                                 Copy-Item $zipCopyLocation $remoteLocation
                             } catch {
                                 Write-Verbose("Failed to copy data to $remoteLocation. This is likely due to file sharing permissions.")
-                                Invoke-CatchBlockActions
+                                Invoke-CatchActions
                             }
                         }
                     } else {
@@ -376,7 +376,7 @@ Function Write-LargeDataObjectsOnMachine {
             Write-Verbose("Getting Get-ExchangeInstallDirectory string to create Script Block")
             $getExchangeInstallDirectoryString = Add-ScriptBlockInjection @scriptBlockInjectParams `
                 -PrimaryScriptBlock ${Function:Get-ExchangeInstallDirectory} `
-                -CatchActionFunction ${Function:Invoke-CatchBlockActions}
+                -CatchActionFunction ${Function:Invoke-CatchActions}
             Write-Verbose("Creating Script Block")
             $getExchangeInstallDirectoryScriptBlock = [scriptblock]::Create($getExchangeInstallDirectoryString)
 
@@ -442,7 +442,7 @@ Function Write-LargeDataObjectsOnMachine {
                             Copy-Item $_.VersionInfo.FileName $remoteLocation
                         } catch {
                             Write-Verbose("Failed to copy data to $remoteLocation. This is likely due to file sharing permissions.")
-                            Invoke-CatchBlockActions
+                            Invoke-CatchActions
                         }
                     }
             }
