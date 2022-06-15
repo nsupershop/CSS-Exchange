@@ -24,6 +24,11 @@ function Invoke-ExchangeSessionScriptBlock {
 
         if ($null -eq $Script:CachedExchangePsSession) {
             $Script:CachedExchangePsSession = @{}
+            $Script:PrimaryExchangePsSession = Get-PSSession |
+                Where-Object { $_.Availability -eq "Available" -and
+                    $_.ConfigurationName -eq "Microsoft.Exchange" -and
+                    $_.State -eq "Opened" } |
+                Select-Object -First 1
         }
 
         if (-not ($Script:CachedExchangePsSession.ContainsKey($ServerName))) {
@@ -43,8 +48,8 @@ function Invoke-ExchangeSessionScriptBlock {
     }
     process {
         try {
+            Import-PSSession $Script:CachedExchangePsSession[$ServerName] -AllowClobber | Out-Null
             $params = @{
-                Session      = $Script:CachedExchangePsSession[$ServerName]
                 ScriptBlock  = $ScriptBlock
                 ArgumentList = $ArgumentList
                 ErrorAction  = "Stop"
@@ -58,7 +63,10 @@ function Invoke-ExchangeSessionScriptBlock {
 
 function Invoke-RemoveCachedExchangeSessions {
     [CmdletBinding()]
-    param()
+    param(
+        [scriptblock]
+        $CatchActionFunction
+    )
     process {
         if ($null -ne $Script:CachedExchangePsSession) {
             $Script:CachedExchangePsSession.Keys |
@@ -67,6 +75,14 @@ function Invoke-RemoveCachedExchangeSessions {
                 }
 
             $Script:CachedExchangePsSession = $null
+
+            if ($null -ne $Script:PrimaryExchangePsSession) {
+                try {
+                    Import-PSSession $Script:PrimaryExchangePsSession -ErrorAction Stop -AllowClobber | Out-Null
+                } catch {
+                    Invoke-CatchActionError $CatchActionFunction
+                }
+            }
         }
     }
 }
