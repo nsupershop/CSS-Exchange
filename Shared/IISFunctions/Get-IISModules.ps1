@@ -88,7 +88,7 @@ function Get-IISModules {
                                     if ($null -ne $signature.SignerCertificate.Subject) {
                                         Write-Verbose "Signer information found. Subject: $($signature.SignerCertificate.Subject)"
                                         $mDetails.Signer = $signature.SignerCertificate.Subject.ToString()
-                                        $mDetails.IsMicrosoftSigned = $signature.SignerCertificate.Subject -cmatch "O=Microsoft Corporation"
+                                        $mDetails.IsMicrosoftSigned = $signature.SignerCertificate.Subject -cmatch "O=Microsoft Corporation, L=Redmond, S=Washington"
                                     }
 
                                     $mInfoObject.SignatureDetails = $mDetails
