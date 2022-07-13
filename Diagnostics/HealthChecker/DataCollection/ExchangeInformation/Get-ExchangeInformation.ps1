@@ -2,6 +2,8 @@
 # Licensed under the MIT License.
 
 . $PSScriptRoot\..\..\..\..\Shared\ErrorMonitorFunctions.ps1
+. $PSScriptRoot\..\..\..\..\Shared\IISFunctions\Get-ApplicationHostConfig.ps1
+. $PSScriptRoot\..\..\..\..\Shared\IISFunctions\Get-IISModules.ps1
 . $PSScriptRoot\..\..\..\..\Shared\Get-ExchangeBuildVersionInformation.ps1
 . $PSScriptRoot\..\..\..\..\Shared\Invoke-ScriptBlockHandler.ps1
 . $PSScriptRoot\Get-ExchangeAdPermissions.ps1
@@ -479,6 +481,25 @@ function Get-ExchangeInformation {
             $exchangeInformation.IISConfigurationSettings = Get-ExchangeIISConfigSettings -MachineName $Script:Server `
                 -ExchangeInstallPath $serverExchangeInstallDirectory `
                 -CatchActionFunction ${Function:Invoke-CatchActions}
+
+            Write-Verbose "Trying to query the 'applicationHost.config' file"
+            $applicationHostConfigParams = @{
+                Computername           = $Script:Server
+                ScriptBlockDescription = "Getting applicationHost.config"
+                ScriptBlock            = ${Function:Get-ApplicationHostConfig}
+            }
+            $exchangeInformation.applicationHostConfig = Invoke-ScriptBlockHandler @applicationHostConfigParams
+
+            if ($null -ne $exchangeInformation.applicationHostConfig) {
+                Write-Verbose "Trying to query the modules which are loaded by IIS"
+                $iisModulesScriptParams = @{
+                    ApplicationHostConfig = $exchangeInformation.applicationHostConfig
+                    CatchActionFunction   = ${Function:Invoke-CatchActions}
+                }
+                $exchangeInformation.IISModulesInformation = Get-IISModules @iisModulesScriptParams
+            } else {
+                Write-Verbose "Skipping 'Get-IISModules' as no 'applicationHost.config' file was returned by the previous call"
+            }
 
             Write-Verbose "Query Exchange AD permissions for CVE-2022-21978 testing"
             $exchangeInformation.ExchangeAdPermissions = Get-ExchangeAdPermissions -ExchangeVersion $buildInformation.MajorVersion -OSVersion $OSMajorVersion

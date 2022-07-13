@@ -43,6 +43,8 @@ using System.Collections;
             public Hashtable ApplicationConfigFileStatus = new Hashtable();
             public object DependentServices; // store the results for the dependent services of Exchange.
             public object IISConfigurationSettings; // store the results for the IIS Settings test
+            public object applicationHostConfig; //Stores the applicationHost.config (IIS configuration)
+            public object IISModulesInformation; //Stores the information about modules which are loaded by IIS
         }
 
         public class ExchangeBuildInformation
